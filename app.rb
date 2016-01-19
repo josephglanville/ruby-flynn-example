@@ -1,5 +1,7 @@
 require 'socket'
 require 'sinatra'
+require 'pg'
+require 'redis'
 
 $stdout.sync = true
 
