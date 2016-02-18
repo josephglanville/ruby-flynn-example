@@ -6,13 +6,12 @@ require 'uri'
 
 $stdout.sync = true
 
-if ENV['DATABASE_URL']
-  uri = URI.parse(ENV['DATABASE_URL'])
-  $pg = PG::Connection.open host: uri.host,
-                            user: uri.user,
-                            password: uri.password,
-                            port: uri.port || 5432,
-                            dbname: uri.path[1..-1]
+if ENV['PGHOST']
+  $pg = PG::Connection.open host: ENV['PGHOST'],
+                            user: ENV['PGUSER'],
+                            password: ENV['PGPASSWORD'],
+                            port: 5432,
+                            dbname: ENV['PGDATABASE']
 
   $pg.exec <<-EOF
     CREATE TABLE IF NOT EXISTS counters (
@@ -30,11 +29,11 @@ end
 $redis = Redis.new if ENV['REDIS_URL']
 
 get '/' do
-  @db_status = "Postgres not yet configured, you can add a database with `flynn resource add postgres`"
-  if ENV['DATABASE_URL']
+  @pg_status = "Postgres not yet configured, you can add a database with `flynn resource add postgres`"
+  if ENV['PGHOST']
     $pg.exec("UPDATE counters SET counter = counter + 1 WHERE name = 'visitor_counter' RETURNING counter;") do |result|
       result.each do |row|
-        @db_status = "Postgres visitor counter: %d" % row.values_at('counter')
+        @pg_status = "Postgres visitor counter: %d" % row.values_at('counter')
       end
     end
   end
@@ -49,7 +48,7 @@ get '/' do
 Hello from Flynn on port #{ ENV['PORT'] } from container #{ Socket.gethostname }
 <br>
 <br>
-#{ @db_status }
+#{ @pg_status }
 <br>
 <br>
 #{ @redis_status }
